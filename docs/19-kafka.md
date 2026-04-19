@@ -31,18 +31,36 @@ public interface KafkaManager {
 @Bean
 KafkaHandler kafkaHandler(
 	AppProperties appProperties,
-	BinarySerializer binarySerializer
+	BinarySerializer binarySerializer,
+	DataMapper dataMapper
 ) {
-	KafkaDefinition kafka = appProperties.getKafka().getMessaging();
-	return new KafkaHandlerImpl()
-	.setBinarySerializer(binarySerializer)
-	.setConfigurationFile(kafka.getConfigurationFile())
-	.setProperties(kafka.getProperties());
+	KafkaDefinition kafka = ObjectHelper.useOrDefault(
+		appProperties.getKafka(), 
+		KafkaDefinition::new
+	);
+	if (Boolean.FALSE.equals(kafka.getKafkaEnabled())) {
+		return KafkaHandler.empty();
+	} else {
+		return new KafkaHandlerImpl()
+		.setBinarySerializer(binarySerializer)
+		.setBroadcastEnabled(kafka.getBroadcastEnabled())
+		.setBroadcastTopic(kafka.getBroadcastTopic())
+		.setConfigurationFile(kafka.getConfigurationFile())
+		.setDataMapper(dataMapper)
+		.setDeleteUnusedGroupAndTopic(kafka.getDeleteUnusedGroupAndTopic())
+		.setProperties(kafka.getProperties())
+		.setReloadEnabled(kafka.getReloadEnabled());
+	}
 }
 ```
 
 - `setBinarySerializer`: [BinarySerializer](./05-binary.md) bean.
+- `setBroadcastEnabled`: Untuk komunikasi antar instance dengan topic yang sama, contoh: jika reload di salah satu instance, maka instance lain juga akan di-reload.
+- `setBroadcastTopic`: Nama topic yang digunakan untuk broadcast.
 - `setProperties`: Kafka properties, atau bisa juga menggunakan configuration file.
+- `setDataMapper`: [DataMapper](./04-mapper.md) bean.
+- `setDeleteUnusedGroupAndTopic`: Otomatis hapus group dan topic yang tidak terpakai. 
+- `setReloadEnabled`: Kafka reload dibolehkan atau tidak.
 - `setConfigurationFile`: Kafka properties yang disimpan ke file, [contoh file](./assets/kafka.yaml).
 
 ## Screenshot
